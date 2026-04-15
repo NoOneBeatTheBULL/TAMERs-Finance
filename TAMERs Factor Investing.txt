@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TAMER 因子投資帳戶評估器 — 專業動態版</title>
+  <meta name="description" content="TAMER：以連續型因子Beta、波動損耗與槓桿拖累為核心的專業投資帳戶評估工具" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#040914; --panel:rgba(15,23,42,0.6); --muted:#8b9bb4; 
+      --accent1:#0ea5e9; --accent2:#8b5cf6; --accent3:#10b981;
+      --glass: rgba(255,255,255,0.04); --radius:16px; --pad:20px; --maxw:1280px;
+      --success:#10b981; --warning:#f59e0b; --danger:#f43f5e; 
+      --transition:300ms cubic-bezier(0.4, 0, 0.2, 1);
+      --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;padding:20px;
+      background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, var(--bg) 60%);
+      background-attachment: fixed;
+      font-family:var(--font-ui); color:#f8fafc; -webkit-font-smoothing:antialiased;
+    }
+    
+    /* Animations */
+    @keyframes slideUp { from{opacity:0; transform:translateY(15px)} to{opacity:1; transform:translateY(0)} }
+    @keyframes pulseGlow { 0%{box-shadow:0 0 0 0 rgba(14,165,233,0.4)} 70%{box-shadow:0 0 0 10px rgba(14,165,233,0)} 100%{box-shadow:0 0 0 0 rgba(14,165,233,0)} }
+    @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    
+    .wrap{max-width:var(--maxw);margin:0 auto;display:grid;gap:20px; animation: fadeIn 0.8s ease-out;}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px; padding: 10px 0;}
+    h1{margin:0;font-size:24px; font-weight:800; background:linear-gradient(to right, #38bdf8, #a78bfa); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
+    .sub{color:var(--muted);font-size:14px; margin-top:4px;}
+    
+    .grid{display:grid;grid-template-columns:1fr 440px;gap:20px}
+    @media(max-width:1024px){.grid{grid-template-columns:1fr}}
+    
+    .card{
+      background:var(--panel); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+      border-radius:var(--radius); padding:var(--pad);
+      border:1px solid rgba(255,255,255,0.08); box-shadow:0 20px 40px rgba(0,0,0,0.3);
+      transition: transform var(--transition), border-color var(--transition);
+      animation: slideUp 0.6s ease-out backwards;
+    }
+    .card:hover{border-color:rgba(255,255,255,0.15);}
+    .card:nth-child(2){animation-delay: 0.1s;}
+    .card:nth-child(3){animation-delay: 0.2s;}
+    
+    .row{display:flex;gap:10px;align-items:center}
+    label{display:block;font-size:13px;color:#cbd5e1;margin-bottom:6px; font-weight:600}
+    input,select{
+      width:100%;padding:10px 12px;border-radius:10px;
+      border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2);
+      color:#fff;font-size:14px;transition:all var(--transition);
+      font-family: var(--font-mono);
+    }
+    input:focus,select:focus{
+      outline:none; border-color:var(--accent1); background:rgba(14,165,233,0.05);
+      box-shadow:0 0 0 3px rgba(14,165,233,0.15);
+    }
+    
+    .form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .beta-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px; margin-top:14px; background:rgba(255,255,255,0.02); padding:12px; border-radius:10px; border:1px dashed rgba(255,255,255,0.05);}
+    .beta-grid label{color:#94a3b8; font-size:12px; margin-bottom:4px; text-align:center;}
+    .beta-grid input{text-align:center; padding:8px; font-size:13px;}
+    @media(max-width:700px){.form-grid{grid-template-columns:repeat(2,1fr)}; .beta-grid{grid-template-columns:repeat(3,1fr)}}
+    
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      padding:10px 18px;border-radius:10px;border:none;
+      background:linear-gradient(135deg, var(--accent1), var(--accent2));
+      color:#fff;font-weight:700;font-size:14px;cursor:pointer;
+      transition:all var(--transition); box-shadow:0 4px 12px rgba(14,165,233,0.3);
+    }
+    .btn:hover{transform:translateY(-2px); box-shadow:0 6px 20px rgba(139,92,246,0.4);}
+    .btn:active{transform:translateY(1px);}
+    .btn.glow{animation: pulseGlow 2s infinite;}
+    
+    .btn-ghost{background:var(--glass);border:1px solid rgba(255,255,255,0.05);color:#cbd5e1;padding:8px 14px;border-radius:10px;cursor:pointer; transition:all var(--transition)}
+    .btn-ghost:hover{background:rgba(255,255,255,0.1); color:#fff;}
+    .small{font-size:12px;padding:6px 10px}
+    
+    .table-wrap{max-height:360px;overflow:auto;border-radius:10px; border:1px solid rgba(255,255,255,0.05); margin-top:16px; scrollbar-width:thin;}
+    .table-wrap::-webkit-scrollbar { width: 6px; }
+    .table-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+    
+    table{width:100%;border-collapse:separate; border-spacing: 0; font-size:13px; color:#e2e8f0; font-family:var(--font-mono);}
+    th,td{padding:12px 14px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.04);}
+    th{font-weight:700;color:#94a3b8;position:sticky;top:0;background:#0f172a; font-family:var(--font-ui); z-index:10; text-transform:uppercase; font-size:12px; letter-spacing:0.5px;}
+    tbody tr{transition:all 0.2s ease; animation: slideUp 0.3s ease-out backwards;}
+    tbody tr:hover{background:rgba(255,255,255,0.03);}
+    
+    .pill{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;background:rgba(14,165,233,0.1); border:1px solid rgba(14,165,233,0.2); font-size:13px; font-weight:600; color:#38bdf8;}
+    .pill.score-high{background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.2); color:#34d399;}
+    .pill.score-mid{background:rgba(245,158,11,0.1); border-color:rgba(245,158,11,0.2); color:#fbbf24;}
+    .pill.score-low{background:rgba(244,63,94,0.1); border-color:rgba(244,63,94,0.2); color:#fb7185;}
+    
+    .chart-wrap{height:200px;border-radius:12px;padding:10px;background:rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center; border:1px inset rgba(255,255,255,0.02);}
+    .muted-small{color:var(--muted);font-size:12px}
+    
+    .num{font-family:var(--font-mono); font-weight:800; font-size:28px; line-height:1.2; background:linear-gradient(to bottom right, #fff, #94a3b8); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
+    .num.danger{background:linear-gradient(to bottom right, #fca5a5, #e11d48); -webkit-background-clip:text;}
+    .num-label{font-size:13px; color:#94a3b8; margin-bottom:4px; font-weight:600;}
+    
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.8);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity var(--transition)}
+    .modal-backdrop.show{opacity:1;pointer-events:auto}
+    .modal{width:800px;max-width:92%;background:#0f172a;border-radius:16px;padding:24px;border:1px solid rgba(255,255,255,0.1);box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); transform:scale(0.95); transition:transform var(--transition)}
+    .modal-backdrop.show .modal{transform:scale(1)}
+    
+    .diag-item{padding:10px 0; border-bottom:1px dashed rgba(255,255,255,0.05);}
+    .diag-item:last-child{border:none;}
+  </style>
+</head>
+<body>
+  <div class="wrap" id="app">
+    <header>
+      <div>
+        <h1>TAMER 專業因子評估器</h1>
+        <div class="sub">連續型 Beta 模型 · 波動拖累計算 · 系統風險診斷</div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center">
+        <div class="pill" id="netValueDisplay">淨值：$0</div>
+        <button id="helpBtn" class="btn-ghost">學術說明</button>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-size:16px; font-weight:700;">持倉輸入 <span class="muted-small" style="font-weight:normal">(支援小數點 Beta)</span></div>
+          <div class="row">
+            <button id="addBtn" class="btn">加入資產</button>
+            <button id="clearBtn" class="btn-ghost small">清空</button>
+          </div>
+        </div>
+
+        <form id="assetForm" onsubmit="return false;">
+          <div class="form-grid">
+            <div><label>代號</label><input id="a_symbol" placeholder="VOO / AVUV" autocomplete="off" /></div>
+            <div><label>類別</label>
+              <select id="a_category">
+                <option value="equity">股票/ETF</option>
+                <option value="satellite">衛星/另類</option>
+                <option value="cash">約當現金</option>
+              </select>
+            </div>
+            <div><label>槓桿率 (L)</label><input id="a_leverage" type="number" step="0.1" min="0" value="1.0" /></div>
+            <div><label>持有股數</label><input id="a_qty" type="number" min="0" step="any" value="100" /></div>
+            <div><label>現價 ($)</label><input id="a_price" type="number" step="0.01" min="0" value="100" /></div>
+          </div>
+
+          <div class="beta-grid" id="betaInputs">
+            <div><label>MKT β</label><input type="number" class="f-beta" data-factor="MKT" step="0.05" value="1.0" /></div>
+            <div><label>SMB β</label><input type="number" class="f-beta" data-factor="SMB" step="0.05" value="0.0" /></div>
+            <div><label>HML β</label><input type="number" class="f-beta" data-factor="HML" step="0.05" value="0.0" /></div>
+            <div><label>RMW β</label><input type="number" class="f-beta" data-factor="RMW" step="0.05" value="0.0" /></div>
+            <div><label>CMA β</label><input type="number" class="f-beta" data-factor="CMA" step="0.05" value="0.0" /></div>
+          </div>
+        </form>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:16px;">
+          <div style="font-weight:700">組合清單</div>
+          <div style="display:flex;gap:8px">
+            <button id="importBtn" class="btn-ghost small">匯入 CSV</button>
+            <input id="fileCsv" type="file" accept=".csv" style="display:none" />
+            <button id="exportBtn" class="btn-ghost small">匯出報表</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table id="assetsTable">
+            <thead><tr><th>代號</th><th>名義市值</th><th>槓桿</th><th>MKT</th><th>SMB</th><th>HML</th><th>操作</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <aside style="display:flex; flex-direction:column; gap:20px;">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div style="font-weight:700">總體市場參數設定</div>
+            <button id="calcBtn" class="btn glow">執行精算</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px; margin-bottom:12px;">
+            <div><label>無風險/借貸利率</label><input id="p_cash" title="Risk-free rate & Borrowing cost" value="3.0" step="0.1" type="number"/></div>
+            <div><label>市場波動率 (σ)</label><input id="p_vol" title="Market Volatility % (用來計算幾何拖累)" value="16.0" step="0.5" type="number"/></div>
+            <div><label>摩擦/稅耗成本</label><input id="p_fric" title="Slippage & Tax %" value="0.5" step="0.1" type="number"/></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px; border-top:1px dashed rgba(255,255,255,0.05); padding-top:12px;">
+            <div><label title="Market Premium">MKT%</label><input id="p_MKT" value="5.5" step="0.1" type="number"/></div>
+            <div><label title="Size Premium">SMB%</label><input id="p_SMB" value="2.0" step="0.1" type="number"/></div>
+            <div><label title="Value Premium">HML%</label><input id="p_HML" value="3.0" step="0.1" type="number"/></div>
+            <div><label title="Profitability Premium">RMW%</label><input id="p_RMW" value="2.5" step="0.1" type="number"/></div>
+            <div><label title="Investment Premium">CMA%</label><input id="p_CMA" value="1.5" step="0.1" type="number"/></div>
+          </div>
+        </div>
+
+        <div class="card" style="position:relative; overflow:hidden;">
+          <div style="position:absolute; top:-20px; right:-20px; width:100px; height:100px; background:radial-gradient(circle, rgba(14,165,233,0.1) 0%, transparent 70%); border-radius:50%;"></div>
+          
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div style="font-weight:700">風險與預期回報摘要</div>
+            <div class="pill" id="safetyScore">系統安全：--</div>
+          </div>
+          
+          <div style="display:flex;gap:24px;align-items:flex-end;">
+            <div style="flex:1">
+              <div class="num-label" title="扣除借貸、摩擦與波動拖累後的幾何年化報酬">幾何預期年化 (CAGR)</div>
+              <div class="num" id="expReturn">0.00<span style="font-size:18px">%</span></div>
+            </div>
+            <div>
+              <div class="num-label">波動損耗(Drag)</div>
+              <div class="num" id="dragLoss" style="font-size:20px; color:#fb7185">0.00%</div>
+            </div>
+            <div>
+              <div class="num-label">總實質槓桿</div>
+              <div class="num" id="totalLev" style="font-size:20px">1.00x</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-weight:700; margin-bottom:12px;">組合曝險雷達 (相對於淨值)</div>
+          <div style="display:flex;gap:12px;">
+            <div class="chart-wrap" style="flex:1"><canvas id="radarChart"></canvas></div>
+            <div style="width:130px; display:flex; flex-direction:column; justify-content:center; gap:6px; font-family:var(--font-mono); font-size:12px;">
+               <div style="display:flex; justify-content:space-between"><span style="color:#94a3b8">MKT</span><span id="txt_MKT">0.00</span></div>
+               <div style="display:flex; justify-content:space-between"><span style="color:#94a3b8">SMB</span><span id="txt_SMB">0.00</span></div>
+               <div style="display:flex; justify-content:space-between"><span style="color:#94a3b8">HML</span><span id="txt_HML">0.00</span></div>
+               <div style="display:flex; justify-content:space-between"><span style="color:#94a3b8">RMW</span><span id="txt_RMW">0.00</span></div>
+               <div style="display:flex; justify-content:space-between"><span style="color:#94a3b8">CMA</span><span id="txt_CMA">0.00</span></div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <section class="card">
+      <div style="font-weight:700; margin-bottom:12px; color:#38bdf8;">學術診斷與改善建議</div>
+      <div id="diagnostics" style="line-height:1.6; font-size:14px; color:#e2e8f0;">請點擊「執行精算」以產生風險評估報告。</div>
+    </section>
+
+  </div>
+
+  <div id="modalBackdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
+        <h2 style="margin:0; font-size:18px;">模型學術邏輯說明</h2>
+        <button id="closeModal" class="btn-ghost small">關閉</button>
+      </div>
+      <div style="color:#cbd5e1;font-size:14px;line-height:1.7;">
+        <p>此升級版工具修正了傳統二元因子的盲點，採用更嚴謹的計量財務模型：</p>
+        <ul style="padding-left:20px; display:flex; flex-direction:column; gap:10px;">
+          <li><strong>連續型 Beta：</strong> 允許使用者輸入 $0.0 \sim 2.0$ 的迴歸係數，取代不精確的全有全無勾選。</li>
+          <li><strong>幾何預期回報 (Geometric Return)：</strong> <br>公式：$E(R_{geom}) = E(R_{arithmetic}) - \frac{1}{2}\sigma_{port}^2$。考慮了波動對長期複利的侵蝕。</li>
+          <li><strong>槓桿損耗 (Leverage Drag)：</strong> 當使用高於 1 倍槓桿時，波動率會被倍數放大，產生的損耗公式近似為 $\frac{L^2 \sigma^2}{2}$，工具會自動計算並扣除此項拖累。</li>
+          <li><strong>非系統風險懲罰：</strong> 安全分數不僅看槓桿與集中度，若持股數量極少（$<5$ 檔），將因無法有效分散個股風險而遭系統扣分。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    // ====== Data & Utilities ======
+    const STORAGE_KEY = 'tamer_academic_v2';
+    let assets = []; 
+    const factorList = ['MKT','SMB','HML','RMW','CMA'];
+
+    const uid = ()=> Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+    const el = id => document.getElementById(id);
+    const getVal = id => Number(el(id).value) || 0;
+    const fmt = (n, dec=2) => Number(n||0).toFixed(dec);
+
+    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify({assets})); }
+    function load(){ 
+      try { 
+        const raw = localStorage.getItem(STORAGE_KEY); 
+        if(raw) { 
+          assets = JSON.parse(raw).assets || []; 
+          // Migration from v1 (checkbox arrays) to v2 (beta objects)
+          assets = assets.map(a => {
+            if(Array.isArray(a.factors)) {
+              const betas = { MKT:0, SMB:0, HML:0, RMW:0, CMA:0 };
+              a.factors.forEach(f => betas[f] = 1.0);
+              // Default MKT to 1.0 for equities if old data missed it
+              if(a.category === 'equity' && betas.MKT === 0) betas.MKT = 1.0;
+              a.betas = betas;
+              delete a.factors;
+            }
+            if(!a.betas) a.betas = { MKT:1, SMB:0, HML:0, RMW:0, CMA:0 };
+            return a;
+          });
+        } 
+      } catch(e) { assets = []; } 
+    }
+
+    // ====== Animated Counter ======
+    function animateValue(obj, start, end, duration, formatStr = "", isColor = false) {
+      if(!obj) return;
+      let startTimestamp = null;
+      const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        // Easing out cubic
+        const ease = 1 - Math.pow(1 - progress, 3);
+        const current = start + ease * (end - start);
+        
+        let output = fmt(current);
+        if(formatStr === "%") output += '<span style="font-size:18px">%</span>';
+        else output += formatStr;
+        
+        obj.innerHTML = output;
+        
+        if(isColor) {
+           obj.className = `num ${current < 0 ? 'danger' : ''}`;
+        }
+        
+        if (progress < 1) window.requestAnimationFrame(step);
+        else {
+           obj.innerHTML = fmt(end) + (formatStr === "%" ? '<span style="font-size:18px">%</span>' : formatStr);
+           if(isColor) obj.className = `num ${end < 0 ? 'danger' : ''}`;
+        }
+      };
+      window.requestAnimationFrame(step);
+    }
+
+    // ====== Charting ======
+    let radarChart = null;
+    function initCharts(){
+      const ctx = el('radarChart')?.getContext('2d');
+      if(!ctx) return;
+      Chart.defaults.color = '#94a3b8';
+      Chart.defaults.font.family = "'JetBrains Mono', monospace";
+      
+      radarChart = new Chart(ctx, {
+        type:'radar',
+        data:{ 
+          labels: factorList, 
+          datasets:[{ 
+            label:'組合因子Beta', 
+            data:[0,0,0,0,0], 
+            backgroundColor:'rgba(14,165,233,0.2)', 
+            borderColor:'rgba(14,165,233,0.9)', 
+            pointBackgroundColor:'#fff',
+            pointBorderColor:'rgba(14,165,233,1)',
+            borderWidth:2 
+          }]
+        },
+        options:{ 
+          responsive:true, maintainAspectRatio:false, 
+          scales:{ 
+            r:{ 
+              beginAtZero:true, 
+              angleLines: { color: 'rgba(255,255,255,0.1)' },
+              grid: { color: 'rgba(255,255,255,0.1)' },
+              ticks: { backdropColor: 'transparent', color: '#64748b', stepSize:0.5 }
+            } 
+          }, 
+          plugins:{ legend:{display:false} },
+          animation: { duration: 800, easing: 'easeOutQuart' }
+        }
+      });
+    }
+
+    function updateRadar(vals){ 
+      if(radarChart) { 
+        radarChart.data.datasets[0].data = vals; 
+        radarChart.update(); 
+      } 
+    }
+
+    // ====== Rendering ======
+    function renderAssets(){
+      const tbody = el('assetsTable').querySelector('tbody');
+      tbody.innerHTML = '';
+      let totalNav = 0;
+      
+      assets.forEach((a, i) => {
+        const mv = (a.qty||0) * (a.price||0);
+        totalNav += mv;
+        const nomMv = mv * (a.leverage||1);
+        
+        const tr = document.createElement('tr');
+        tr.style.animationDelay = `${i * 0.05}s`;
+        tr.innerHTML = `
+          <td><strong>${a.symbol}</strong> <span class="muted-small">${a.category==='equity'?'EQ':a.category==='cash'?'CSH':'SAT'}</span></td>
+          <td>${fmt(nomMv,0)}</td>
+          <td>${fmt(a.leverage)}x</td>
+          <td>${a.category==='equity' ? fmt(a.betas.MKT) : '-'}</td>
+          <td>${a.category==='equity' ? fmt(a.betas.SMB) : '-'}</td>
+          <td>${a.category==='equity' ? fmt(a.betas.HML) : '-'}</td>
+          <td>
+            <button class="small btn-ghost" data-edit="${a.id}">載入</button>
+            <button class="small btn-ghost" style="color:#f43f5e; border-color:rgba(244,63,94,0.3)" data-del="${a.id}">刪除</button>
+          </td>`;
+        tbody.appendChild(tr);
+      });
+      
+      el('netValueDisplay').textContent = `淨值：$${fmt(totalNav, 0)}`;
+      
+      // Events for dynamically created buttons
+      tbody.querySelectorAll('button[data-del]').forEach(b=> b.addEventListener('click', ()=> {
+        assets = assets.filter(x=> x.id !== b.dataset.del); save(); renderAssets();
+      }));
+      tbody.querySelectorAll('button[data-edit]').forEach(b=> b.addEventListener('click', ()=> {
+        const id = b.dataset.edit; const a = assets.find(x=> x.id===id); if(!a) return;
+        el('a_symbol').value = a.symbol; el('a_category').value = a.category;
+        el('a_qty').value = a.qty; el('a_price').value = a.price; el('a_leverage').value = a.leverage;
+        document.querySelectorAll('.f-beta').forEach(inp => { inp.value = a.betas[inp.dataset.factor] || 0; });
+        assets = assets.filter(x=> x.id !== id); save(); renderAssets();
+      }));
+    }
+
+    // ====== Core Calculation (Academic Engine) ======
+    // Prevent global variable caching issues for animation
+    let lastExpReturn = 0;
+    let lastDrag = 0;
+    let lastLev = 1;
+
+    function calculate(){
+      const btn = el('calcBtn');
+      btn.classList.remove('glow');
+      void btn.offsetWidth; // trigger reflow
+      btn.classList.add('glow');
+
+      const NAV = assets.reduce((s,a) => s + (a.qty||0)*(a.price||0), 0);
+      if(NAV <= 0) {
+        el('diagnostics').innerHTML = '<span style="color:var(--danger)">錯誤：帳戶淨值為零，請輸入持倉價格與數量。</span>';
+        return;
+      }
+
+      // 1. Get Params
+      const Rf = getVal('p_cash') / 100;
+      const sigmaMarket = getVal('p_vol') / 100;
+      const friction = getVal('p_fric') / 100;
+      
+      const premiums = {
+        MKT: getVal('p_MKT') / 100, SMB: getVal('p_SMB') / 100,
+        HML: getVal('p_HML') / 100, RMW: getVal('p_RMW') / 100, CMA: getVal('p_CMA') / 100
+      };
+
+      // 2. Aggregate Exposures & Leverage
+      let totalNominal = 0;
+      let totalEquityNominal = 0;
+      let expPort = { MKT:0, SMB:0, HML:0, RMW:0, CMA:0 };
+      
+      let uniqueEquities = new Set();
+      let maxConcentrationNominal = 0;
+
+      assets.forEach(a => {
+        const mv = (a.qty || 0) * (a.price || 0);
+        const nominal = mv * (a.leverage || 1);
+        totalNominal += nominal;
+        
+        if(nominal > maxConcentrationNominal) maxConcentrationNominal = nominal;
+
+        if(a.category === 'equity') {
+          totalEquityNominal += nominal;
+          uniqueEquities.add(a.symbol);
+          factorList.forEach(f => {
+            // Port Beta = Sum( Asset_Weight_by_NAV * Asset_Beta )
+            expPort[f] += (nominal / NAV) * (a.betas[f] || 0);
+          });
+        }
+      });
+
+      const effectiveLeverage = totalNominal / NAV;
+
+      // 3. Expected Arithmetic Return calculations
+      let factorExpectedReturn = 0;
+      factorList.forEach(f => { factorExpectedReturn += expPort[f] * premiums[f]; });
+
+      const borrowingCost = Math.max(0, effectiveLeverage - 1) * Rf;
+      const arithmeticReturn = Rf + factorExpectedReturn - borrowingCost - friction;
+
+      // 4. Volatility Drag (Approximation for Leveraged Geometric Return)
+      // Drag = 0.5 * (Leverage * Sigma)^2
+      const portVol = (totalEquityNominal / NAV) * sigmaMarket; // Approximation: scaling market vol by equity leverage
+      const volDrag = 0.5 * Math.pow(portVol, 2);
+      
+      const geometricReturn = arithmeticReturn - volDrag;
+
+      // 5. Safety Scoring Engine
+      const concPct = maxConcentrationNominal / totalNominal; // Max position size
+      let scoreConc = Math.max(0, 100 - (concPct * 100 * 1.5)); // Penalize if > 33%
+      
+      let scoreLev = Math.max(0, 100 - ((effectiveLeverage - 1) * 40)); // Penalize high leverage
+      
+      let penaltyDiversification = 0;
+      if(uniqueEquities.size < 5 && uniqueEquities.size > 0) {
+        penaltyDiversification = (5 - uniqueEquities.size) * 10; // -10 points per missing asset under 5
+      }
+
+      let safety = Math.round(scoreConc * 0.4 + scoreLev * 0.6) - penaltyDiversification;
+      safety = Math.max(0, Math.min(100, safety));
+
+      // 6. UI Updates (Animations)
+      const targetRet = geometricReturn * 100;
+      const targetDrag = volDrag * 100;
+      
+      animateValue(el('expReturn'), lastExpReturn, targetRet, 1000, "%", true);
+      animateValue(el('dragLoss'), lastDrag, targetDrag, 1000, "%");
+      animateValue(el('totalLev'), lastLev, effectiveLeverage, 1000, "x");
+      
+      lastExpReturn = targetRet; lastDrag = targetDrag; lastLev = effectiveLeverage;
+
+      // Update Radars & Texts
+      updateRadar([expPort.MKT, expPort.SMB, expPort.HML, expPort.RMW, expPort.CMA]);
+      factorList.forEach(f => { el(`txt_${f}`).textContent = fmt(expPort[f]); });
+
+      // Safety UI
+      const sBox = el('safetyScore');
+      sBox.textContent = `系統安全：${safety}`;
+      sBox.className = 'pill ' + (safety > 75 ? 'score-high' : safety > 45 ? 'score-mid' : 'score-low');
+
+      // 7. Academic Diagnostics Generation
+      let diag = `<div class="diag-item"><strong>投資組合結構：</strong> 總名義曝險 $${fmt(totalNominal,0)} (實質槓桿 ${fmt(effectiveLeverage)}x)。</div>`;
+      
+      if(effectiveLeverage > 1.5) {
+        diag += `<div class="diag-item" style="color:var(--warning)"><strong>⚠️ 槓桿警告：</strong> 實質槓桿達 ${fmt(effectiveLeverage)}x，預估造成每年 ${fmt(targetDrag)}% 的波動率拖累 (Volatility Drag)。在劇烈震盪市場中，複利損耗將顯著侵蝕淨值。</div>`;
+      }
+      if(uniqueEquities.size > 0 && uniqueEquities.size < 5) {
+        diag += `<div class="diag-item" style="color:var(--warning)"><strong>⚠️ 非系統風險：</strong> 股票資產僅 ${uniqueEquities.size} 檔。Fama-French 模型基於高度分散的前提，集中持股將導致「個股風險 (Idiosyncratic Risk)」主導回報，因子溢酬可能失效。</div>`;
+      }
+      if(concPct > 0.4) {
+        diag += `<div class="diag-item" style="color:var(--danger)"><strong>🚨 集中度過高：</strong> 最大單一資產佔比達 ${fmt(concPct*100)}%，面臨嚴重尾部風險。</div>`;
+      }
+      if(expPort.MKT < 0.5 && totalEquityNominal > 0) {
+         diag += `<div class="diag-item"><strong>ℹ️ 低市場曝險：</strong> 組合 MKT Beta 偏低，可能錯失大盤基準報酬，請確認是否為刻意的對沖配置。</div>`;
+      }
+      
+      if(diag.indexOf('⚠️') === -1 && diag.indexOf('🚨') === -1) {
+        diag += `<div class="diag-item" style="color:var(--success)"><strong>✅ 狀態健康：</strong> 槓桿控制得當且風險分散，幾何預期報酬具備學術統計上的合理性。</div>`;
+      }
+
+      el('diagnostics').innerHTML = diag;
+      save();
+    }
+
+    // ====== Event Listeners ======
+    document.addEventListener('DOMContentLoaded', ()=>{
+      load();
+      initCharts();
+      renderAssets();
+      
+      // Auto Category Beta presets to save typing
+      el('a_category').addEventListener('change', (e) => {
+        const isEq = e.target.value === 'equity';
+        document.querySelectorAll('.f-beta').forEach(inp => {
+          inp.disabled = !isEq;
+          if(!isEq) inp.value = "0.0";
+          else if(inp.dataset.factor === 'MKT') inp.value = "1.0";
+        });
+      });
+
+      el('addBtn').addEventListener('click', ()=>{
+        const sym = el('a_symbol').value.trim().toUpperCase();
+        if(!sym) return alert('請輸入資產代號');
+        
+        const betas = {};
+        document.querySelectorAll('.f-beta').forEach(inp => { betas[inp.dataset.factor] = Number(inp.value)||0; });
+
+        assets.push({ 
+          id: uid(), symbol: sym, category: el('a_category').value, 
+          qty: getVal('a_qty'), price: getVal('a_price'), leverage: getVal('a_leverage'), betas 
+        });
+        save(); renderAssets();
+        el('a_symbol').value = '';
+        el('a_symbol').focus();
+      });
+
+      el('calcBtn').addEventListener('click', calculate);
+      el('clearBtn').addEventListener('click', ()=>{ 
+        if(confirm('確定清空所有持倉？')) { assets=[]; save(); renderAssets(); el('diagnostics').innerHTML='已清空。';} 
+      });
+
+      // Modal Events
+      const modal = el('modalBackdrop');
+      el('helpBtn').addEventListener('click', ()=> modal.classList.add('show'));
+      el('closeModal').addEventListener('click', ()=> modal.classList.remove('show'));
+      modal.addEventListener('click', (e)=> { if(e.target === modal) modal.classList.remove('show'); });
+      
+      // CSV Export
+      el('exportBtn').addEventListener('click', ()=>{
+        if(!assets.length) return alert('無資料可匯出');
+        const rows = [['symbol','category','qty','price','leverage','beta_MKT','beta_SMB','beta_HML','beta_RMW','beta_CMA']];
+        assets.forEach(a=> {
+          rows.push([a.symbol, a.category, a.qty, a.price, a.leverage, a.betas.MKT, a.betas.SMB, a.betas.HML, a.betas.RMW, a.betas.CMA]);
+        });
+        const csv = rows.map(r=> r.join(',')).join('\n');
+        const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob); 
+        const a = document.createElement('a'); a.href = url; a.download = 'tamer_academic.csv'; a.click(); 
+        URL.revokeObjectURL(url);
+      });
+      
+      // CSV Import (Basic mapping)
+      el('importBtn').addEventListener('click', ()=> el('fileCsv').click());
+      el('fileCsv').addEventListener('change', (e)=>{
+        const f = e.target.files[0]; if(!f) return;
+        const r = new FileReader();
+        r.onload = ev=>{
+          const lines = ev.target.result.split(/\r?\n/).filter(Boolean);
+          if(lines.length < 2) return;
+          const header = lines[0].split(',').map(h=>h.trim().toLowerCase());
+          
+          lines.slice(1).forEach(line=>{
+            const cols = line.split(',');
+            const obj = {}; header.forEach((h,i)=> obj[h]=cols[i] ? cols[i].trim() : '');
+            if(!obj.symbol) return;
+            assets.push({ 
+              id: uid(), symbol: obj.symbol.toUpperCase(), category: obj.category||'equity', 
+              qty: Number(obj.qty)||0, price: Number(obj.price)||0, leverage: Number(obj.leverage)||1, 
+              betas: {
+                MKT: Number(obj.beta_mkt||obj.beta_MKT)||0, SMB: Number(obj.beta_smb||obj.beta_SMB)||0,
+                HML: Number(obj.beta_hml||obj.beta_HML)||0, RMW: Number(obj.beta_rmw||obj.beta_RMW)||0,
+                CMA: Number(obj.beta_cma||obj.beta_CMA)||0
+              }
+            });
+          });
+          save(); renderAssets(); e.target.value = ''; alert('匯入成功');
+        };
+        r.readAsText(f,'utf-8');
+      });
+      
+      // Initial calc if data exists
+      if(assets.length > 0) setTimeout(calculate, 500);
+    });
+  </script>
+</body>
+</html>
